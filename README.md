@@ -73,6 +73,13 @@ CLIENT_ORIGIN=https://your-domain
 PORT=3001
 ```
 
+Ops notes:
+- CORS: Set `CLIENT_ORIGIN` to a comma-separated list of allowed domains (no wildcard). The server enforces this list.
+- Demo: Set `VITE_DEMO=false` in production; the UI hides demo helpers.
+- Entitlements: In production, entitlements require Supabase (service role). JSON fallback is disabled.
+- Webhooks: Configure `STRIPE_WEBHOOK_SECRET` per environment; rotate any test keys before going live.
+- See `.env.production.example` for a complete template.
+
 ## Repo Structure
 
 ```text

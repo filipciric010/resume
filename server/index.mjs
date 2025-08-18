@@ -17,6 +17,9 @@ const app = express();
 
 // Config
 const PORT = process.env.PORT || 3001;
+// CORS: lock to explicit origins. In prod, set CLIENT_ORIGIN to a comma-separated
+// list of allowed origins (e.g., https://app.example.com,https://www.example.com).
+// Never use '*' here.
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:8080';
 const ALLOWED_ORIGINS = CLIENT_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
@@ -53,6 +56,17 @@ const supabaseAnon = (SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY)
   ? createClient(SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
   : null;
 
+// Log entitlement backend mode
+if (process.env.NODE_ENV === 'production') {
+  if (supabaseAdmin) {
+    console.log('[entitlements] Using Supabase table (production)');
+  } else {
+    console.warn('[entitlements] WARNING: SUPABASE not configured in production; pro features will be unavailable');
+  }
+} else {
+  console.log('[entitlements] Dev mode: Supabase', Boolean(supabaseAdmin), 'JSON fallback enabled');
+}
+
 async function readEntitlements() {
   try {
     const buf = await fs.readFile(ENTITLEMENTS_PATH, 'utf8');
@@ -85,6 +99,10 @@ export async function getPro(userId) {
       console.warn('[entitlements] supabase getPro failed, falling back to JSON:', e?.message || e);
     }
   }
+  // In production, do not allow JSON fallback; require Supabase configuration
+  if (process.env.NODE_ENV === 'production') {
+    return false;
+  }
   const ent = await readEntitlements();
   const rec = ent[userId];
   return rec === true || (rec && (rec.status === 'active' || rec.pro === true));
@@ -101,6 +119,10 @@ async function upsertEntitlement({ userId, status = 'active', priceId = '', stri
     } catch (e) {
       console.warn('[entitlements] supabase upsert failed, falling back to JSON:', e?.message || e);
     }
+  }
+  if (process.env.NODE_ENV === 'production') {
+    console.warn('[entitlements] Skipping JSON fallback in production; entitlement not persisted for user:', userId);
+    return;
   }
   const map = await readEntitlements();
   map[userId] = { pro: status === 'active', status, priceId, stripeCustomerId, currentPeriodEnd };
