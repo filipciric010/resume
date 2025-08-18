@@ -1,161 +1,107 @@
-# Resume Boost - AI-Powered Resume Builder
+# Resume Boost – AI Resume Builder
 
-A modern, AI-enhanced resume builder built with React, TypeScript, and OpenAI integration. Create professional resumes with AI-powered suggestions, bullet point optimization, and personalized cover letter generation.
+![CI](https://github.com/filipciric010/resume/actions/workflows/ci.yml/badge.svg)
 
-## ✨ Features
+Build polished, ATS‑friendly resumes with AI. Generate quantified bullets, tailor a cover letter, check ATS match, and export pixel‑perfect PDFs. Includes Stripe‑gated Pro features and Supabase auth.
 
-### Core Resume Builder
-- **Multiple Templates**: Choose from Classic, Modern, and Compact templates
-- **Real-time Preview**: See changes instantly as you edit
-- **Section Management**: Personal info, experience, education, skills, projects, and certifications
-- **Export Options**: PDF export and JSON import/export
-- **Shareable Links**: Generate links to share your resume
+• Live Demo: https://your-demo.example.com — click “Load Demo” on the Editor to try with sample data (no keys required).
 
-### 🤖 AI-Powered Features
-- **Bullet Point Suggestions**: Generate 3 tailored, quantified bullet points based on role, impact, and tools
-- **Bullet Point Rewriting**: Improve existing bullets with AI quantification and optimization  
-- **Cover Letter Generation**: Create personalized cover letters (≤250 words) from resume data and job descriptions
-- **ATS Optimization**: AI suggestions follow ATS-friendly best practices
+## Screenshots
 
-### Additional Features
-- **ATS Analysis**: Score your resume against job descriptions
-- **Template Switching**: Change templates while preserving content
-- **Mobile Responsive**: Works seamlessly on all devices
-- **Dark Mode Support**: Built-in theme switching
+![Editor (Template Switch)](/og/editor.png)
+![ATS Score Pane](/og/ats.png)
+![AI Bullets Generator](/og/bullets.gif)
+![Cover Letter Modal](/og/cover-letter.png)
+![PDF Export](/og/export.png)
 
-## 🚀 Getting Started
+### Video Walkthrough
+Loom: https://www.loom.com/share/your-video-id
 
-### Prerequisites
+## Features
+- AI bullets generator (role/impact/tools → 3 quantified suggestions)
+- AI cover letter (tailored to JD)
+- ATS scoring + actionable fixes
+- PDF export via headless Chrome (print CSS)
+- Multiple templates (Classic, Modern, Compact)
+- Stripe “Pro” unlock (Checkout + Webhook + entitlements)
+- Google sign‑in (Supabase Auth)
 
-### Installation
+## Tech Stack
+- React 18, TypeScript, Vite
+- Tailwind CSS, shadcn/ui, Lucide
+- Node/Express, Puppeteer
+- OpenAI API, Supabase
+- Stripe (Checkout sessions + webhook)
 
-1. **Clone the repository**
-   ```bash
-   git clone <YOUR_GIT_URL>
-   cd <YOUR_PROJECT_NAME>
-   ```
+## Quick Start (Docker Compose)
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+Dev with hot‑reload for web and server:
 
-3. **Configure AI Features (Optional)**
-   ```bash
-   # Copy the example environment file
-   cp .env.local.example .env.local
-   
-   # Edit .env.local and add your OpenAI API key
-   VITE_OPENAI_API_KEY=your_openai_api_key_here
-   ```
+```bash
+docker-compose up --build
+```
 
-4. **Start the development server**
-   ```bash
-   npm run dev
-   ```
+Defaults:
+- Web: http://localhost:5173
+- Server API: http://localhost:3001 (Vite proxies /api → server)
+- Demo mode on (VITE_DEMO=true). Click “Load Demo” on the Editor.
 
-5. **Open your browser**
-   Navigate to `http://localhost:8080`
+## Production Checklist
+Set these before launch:
 
+```bash
+# Demo & client
+VITE_DEMO=false
 
-## 🤖 AI Features Setup
+# OpenAI (server only)
+OPENAI_API_KEY=sk-...
 
-### Getting an OpenAI API Key
-1. Visit [OpenAI Platform](https://platform.openai.com/api-keys)
-2. Sign up or log in to your account
-3. Navigate to API Keys section
-4. Create a new API key
-5. Add it to your `.env.local` file as `VITE_OPENAI_API_KEY`
+# Stripe
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+APP_URL=https://your-domain
+STRIPE_PRICE_ID=price_default # optional fallback
+STRIPE_PRICE_PRO=price_...
+STRIPE_PRICE_TEAMS=price_...
+VITE_STRIPE_PRICE_PRO=price_...
+VITE_STRIPE_PRICE_TEAMS=price_...
 
-### AI Features Usage
+# Supabase
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_ANON_KEY=...
+CLIENT_ORIGIN=https://your-domain
+PORT=3001
+```
 
-**Without API Key**: The application works fully without an API key. AI features will show a helpful banner and fall back to demo content.
+## Repo Structure
 
-**With API Key**: Unlock full AI capabilities:
-- Smart bullet point generation
-- Intelligent content rewriting
-- Personalized cover letter creation
+```text
+.
+├─ server/
+│  ├─ index.mjs          # Express app (API, Stripe webhook, PDF)
+│  ├─ aiRouter.mjs       # Unified AI endpoint
+│  └─ ...
+├─ src/
+│  ├─ pages/             # Routes (Editor, ATS, Templates, etc.)
+│  ├─ components/        # UI and sections (Pricing, Cover Letter, ATS)
+│  ├─ lib/               # pay.ts, utils, supabase client
+│  └─ store/             # Zustand stores
+├─ public/               # Assets
+├─ data/                 # entitlements.json (Stripe Pro)
+├─ docker-compose.yml    # Dev: web + server
+├─ Dockerfile            # Prod image
+└─ .github/workflows/ci.yml
+```
 
-## 🛠 Technology Stack
-
-- **Frontend**: React 18, TypeScript
-- **Styling**: Tailwind CSS, shadcn/ui components
-- **Build Tool**: Vite
-- **State Management**: Zustand
-- **AI Integration**: OpenAI GPT-3.5/4
-- **PDF Generation**: @react-pdf/renderer
-- **Icons**: Lucide React
-
-## 📝 Usage
-
-### Creating a Resume
-1. Navigate to the **Editor** page
-2. Fill in your personal information, experience, education, and skills
-3. Choose a template from the picker
-4. Use AI features to enhance your content (if API key is configured)
-5. Export as PDF when ready
-
-### AI-Enhanced Editing
-- **Bullet Suggestions**: Click "Improve with AI" on experience sections
-- **Quantify Bullets**: Hover over bullet points and click the refresh icon
-- **Generate Cover Letters**: Use the Cover Letter page with job descriptions
-
-### ATS Optimization
-- Visit the **ATS** page to analyze your resume against job descriptions
-- Get scored feedback on keyword matches and optimization suggestions
-
-## 🚀 Running Locally
-
-Two processes run in dev: Vite (client) and Node (server).
+## Local Dev (npm)
 
 ```bash
 npm install
-npm run dev  # starts client on 8080 and server on 3001 (proxied /api)
+npm run dev  # web on 5173, server on 3001
 ```
 
-Environment variables:
+## License & Sale
+This codebase is prepared for a full‑rights sale. Upon purchase, the seller will transfer all IP and provide a sale pack in `/sale` (handover docs, env templates, and deployment notes).
 
-Copy `.env.example` and set required values. In dev, AI calls are proxied to the server, do not set OpenAI key on the client.
-
-```bash
-cp .env.example .env
-# fill in SUPABASE vars and optionally server OPENAI_API_KEY
-```
-
-## 🧰 Production Build & Deploy
-
-```bash
-npm run build             # builds client to dist/
-npm start                 # runs server (serves dist/ and /api)
-```
-
-### Docker
-
-```bash
-docker build -t ai-resume .
-docker run -p 3001:3001 \
-   -e CLIENT_ORIGIN=http://localhost:3001 \
-   -e OPENAI_API_KEY=sk-... \
-   ai-resume
-```
-
-The server serves the built client from `/` and APIs under `/api/*`.
-
-## 🧩 Environment Variables
-
-See `.env.example`. Do not expose `OPENAI_API_KEY` in the client.
-
-## 📄 License
-
-This project is built with love using modern web technologies. Feel free to use it for your resume building needs!
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
----
-
-**Need help?** Check out the [Lovable documentation](https://docs.lovable.dev) or open an issue in this repository.
+—
+Questions? Open an issue or reach out about licensing/sale.

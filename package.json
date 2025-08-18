@@ -9,6 +9,7 @@
     "dev:server": "node server/index.mjs",
     "dev": "concurrently \"npm:dev:client\" \"npm:dev:server\"",
     "build": "vite build",
+  "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "build:dev": "vite build --mode development",
     "start": "node server/index.mjs",
     "lint": "eslint .",
