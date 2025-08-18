@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import aiRouter from './aiRouter.mjs';
 
 const app = express();
 
@@ -27,6 +28,8 @@ app.use(morgan('tiny'));
 
 const limiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
 app.use('/api/', limiter);
+// Mount unified AI router
+app.use('/api/ai', aiRouter);
 
 // PDF generation endpoint
 const pdfRequestSchema = z.object({
