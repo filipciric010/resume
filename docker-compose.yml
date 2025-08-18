@@ -1,0 +1,43 @@
+# Development docker-compose for separate web (Vite) and server (Express)
+# How to run:
+#   docker-compose up --build
+#
+# Notes:
+# - This repo is not a strict monorepo (no ./client folder). The web app is at repo root.
+#   We run it from /app and mount the whole repo. The server also runs from the same repo.
+# - Vite dev proxy for /api -> http://localhost:3001 is already configured in vite.config.ts.
+# - The web service exposes Vite on port 5173 (overridden via CLI flags), without changing config files.
+# - The server service uses npm start; for live reload, swap to "npm run dev:server" if desired (requires dev deps).
+
+version: "3.9"
+
+services:
+  server:
+    image: node:20
+    working_dir: /app
+    # Mount the whole repo so nodemon/live reload can see changes in server/
+    volumes:
+      - ./:/app
+    ports:
+      - "3001:3001"
+    # If you maintain a server-specific env file, place it at ./server/.env
+    # and it will be loaded here.
+    env_file:
+      - ./server/.env
+    # Use production start; switch to "npm run dev:server" for nodemon/hot reload.
+    command: sh -c "npm ci && npm run start"
+
+  web:
+    image: node:20
+    working_dir: /app
+    # Mount the repo; the Vite app runs from the root in this project.
+    volumes:
+      - ./:/app
+    environment:
+      - VITE_API_BASE=http://localhost:3001
+      - VITE_DEMO=true
+    ports:
+      - "5173:5173"
+    # Run only the client dev server and bind to all interfaces and port 5173.
+    # Using CLI flags avoids editing vite.config.ts and keeps existing settings intact.
+    command: sh -c "npm ci && npm run dev:client -- --host 0.0.0.0 --port 5173"
