@@ -14,13 +14,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from '@/components/auth/AuthPage';
 import { toast } from 'sonner';
 import { useResume } from '@/store/useResume';
+import { useATS } from '@/store/useATS';
+import { SAMPLE_RESUME, SAMPLE_JD } from '@/demo/sample';
 import { GuidelineTips } from '@/components/GuidelineTips';
 
 const Editor = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const { data } = useResume();
+  const { data, importSnapshot } = useResume();
+  const { setJobDescription } = useATS();
 
   useEffect(() => {
     // Check authentication first
@@ -37,6 +40,21 @@ const Editor = () => {
   return (
     <div className="min-h-screen bg-background">
       <TopBar />
+
+      {import.meta.env.VITE_DEMO === 'true' && (
+        <div className="container mx-auto px-4 mt-3 flex justify-end print-hide">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              importSnapshot(SAMPLE_RESUME);
+              setJobDescription(SAMPLE_JD);
+            }}
+          >
+            Load Demo
+          </Button>
+        </div>
+      )}
       
       {/* AI Banner */}
       <div className="container mx-auto px-4 py-2 print-hide">

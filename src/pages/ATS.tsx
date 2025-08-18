@@ -9,6 +9,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from '@/components/auth/AuthPage';
 import { useResume } from '@/store/useResume';
+import { useATS } from '@/store/useATS';
+import { SAMPLE_RESUME, SAMPLE_JD } from '@/demo/sample';
 import { evaluate, type AtsResult, type AtsIssue } from '@/lib/ats';
 import { ScoreBadge } from '@/components/ats/ScoreBadge';
 import { BreakdownBars } from '@/components/ats/BreakdownBars';
@@ -22,7 +24,7 @@ const ATS = () => {
   const { user } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const { data, setProfile, addExperience, addEducation, addSkill, updateExperience, updateBullet } = useResume();
-  const [jobDescription, setJobDescription] = useState('');
+  const { jobDescription, setJobDescription } = useATS();
   const [atsResult, setAtsResult] = useState<AtsResult | AtsNewResult | null>(null);
   const isNewResult = (val: AtsResult | AtsNewResult | null): val is AtsNewResult => {
     return !!val && (val as AtsNewResult).matchScore !== undefined;
@@ -463,6 +465,20 @@ const ATS = () => {
           <p className="text-lg text-muted-foreground">
             Paste a job description below to get an ATS compatibility score and optimization suggestions.
           </p>
+          {import.meta.env.VITE_DEMO === 'true' && (
+            <div className="mt-3 flex justify-end">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  // Keep current resume content; only set a sample JD here
+                  setJobDescription(SAMPLE_JD);
+                }}
+              >
+                Load Sample JD
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
