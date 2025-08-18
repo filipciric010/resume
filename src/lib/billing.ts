@@ -1,9 +1,17 @@
-// Lightweight client helpers for Stripe checkout and entitlement checks
-export async function createCheckout(userId?: string) {
+// Lightweight client helpers for Stripe checkout and entitlement checks (JWT-based)
+import { supabase } from '@/lib/supabase';
+
+export async function createCheckout(priceId: string) {
+  if (!priceId) throw new Error('priceId is required');
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData?.session?.access_token;
   const res = await fetch('/api/stripe/create-checkout-session', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId }),
+    headers: {
+      'Content-Type': 'application/json',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+    body: JSON.stringify({ priceId }),
   });
   if (!res.ok) {
     const msg = await res.text().catch(() => 'Failed to create checkout session');
@@ -15,12 +23,14 @@ export async function createCheckout(userId?: string) {
   window.location.assign(url);
 }
 
-export async function hasPro(userId?: string): Promise<boolean> {
+export async function hasPro(): Promise<boolean> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData?.session?.access_token;
   const res = await fetch('/api/pro/me', {
     method: 'GET',
-    headers: userId ? { 'x-user-id': userId } as Record<string, string> : {},
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
   });
   if (!res.ok) return false;
-  const data = await res.json().catch(() => ({ pro: false }));
-  return Boolean(data?.pro);
+  const body = (await res.json().catch(() => ({ pro: false }))) as { pro?: boolean };
+  return Boolean(body?.pro);
 }

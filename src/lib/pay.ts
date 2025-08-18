@@ -10,12 +10,16 @@ export async function startCheckout(priceId: string, userId?: string) {
   window.location.assign(url);
 }
 
-export async function hasPro(userId?: string): Promise<boolean> {
+import { supabase } from '@/lib/supabase';
+
+export async function hasPro(): Promise<boolean> {
+  const sessionRes = await supabase.auth.getSession();
+  const accessToken = sessionRes?.data?.session?.access_token;
   const r = await fetch('/api/pro/me', {
     method: 'GET',
-    headers: userId ? { 'x-user-id': userId } as Record<string, string> : {},
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
   });
   if (!r.ok) return false;
-  const data = await r.json().catch(() => ({ pro: false }));
-  return Boolean(data?.pro);
+  const json = (await r.json().catch(() => ({ pro: false }))) as { pro?: boolean };
+  return Boolean(json?.pro);
 }

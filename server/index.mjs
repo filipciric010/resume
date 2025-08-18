@@ -295,6 +295,22 @@ app.post('/api/pdf', async (req, res) => {
   console.log('[PDF] Using client origin:', origin);
   console.log('[PDF] Navigating to:', url);
 
+    // Simple concurrency cap to avoid resource exhaustion
+    if (!globalThis.__PDF_SEM__) {
+      globalThis.__PDF_SEM__ = { active: 0, max: Number(process.env.PDF_MAX_CONCURRENCY || 2) };
+    }
+    const sem = globalThis.__PDF_SEM__;
+    const wait = async () => {
+      const start = Date.now();
+      while (sem.active >= sem.max) {
+        if (Date.now() - start > 10000) throw new Error('PDF queue timeout');
+        await new Promise(r => setTimeout(r, 100));
+      }
+      sem.active++;
+    };
+    const release = () => { sem.active = Math.max(0, sem.active - 1); };
+
+    await wait();
     const browser = await puppeteer.launch({
       headless: 'new',
       args: [
@@ -346,7 +362,8 @@ app.post('/api/pdf', async (req, res) => {
       pageRanges: '',
     });
 
-    await browser.close();
+  await browser.close();
+  release();
 
     if (!pdfBuffer || pdfBuffer.length < 1000) {
       console.error('[PDF] Generated PDF buffer too small:', pdfBuffer?.length);
@@ -358,6 +375,7 @@ app.post('/api/pdf', async (req, res) => {
     res.send(pdfBuffer);
   } catch (err) {
     console.error('PDF generation failed', err);
+  try { globalThis.__PDF_SEM__ && (globalThis.__PDF_SEM__.active = Math.max(0, globalThis.__PDF_SEM__.active - 1)); } catch {}
     res.status(500).json({ error: 'PDF generation failed', details: String(err?.message || err) });
   }
 });
