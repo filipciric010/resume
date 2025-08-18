@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
 import Stripe from 'stripe';
 import aiRouter from './aiRouter.mjs';
+import { createClient } from '@supabase/supabase-js';
 
 const app = express();
 
@@ -31,6 +32,8 @@ app.use(morgan('tiny'));
 // ===== Stripe integration =====
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID || '';
+const STRIPE_PRICE_PRO = process.env.STRIPE_PRICE_PRO || '';
+const STRIPE_PRICE_TEAMS = process.env.STRIPE_PRICE_TEAMS || '';
 const APP_URL = process.env.APP_URL || 'http://localhost:8080';
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' }) : null;
@@ -38,6 +41,17 @@ const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY, { apiVersion: '
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ENTITLEMENTS_PATH = path.resolve(__dirname, '..', 'data', 'entitlements.json');
+const EVENTS_PATH = path.resolve(__dirname, '..', 'data', 'stripe_events.json');
+
+// Supabase (server-side)
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE || '';
+const supabaseAdmin = (SUPABASE_URL && SUPABASE_SERVICE_ROLE)
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, { auth: { autoRefreshToken: false, persistSession: false } })
+  : null;
+const supabaseAnon = (SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY)
+  ? createClient(SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
+  : null;
 
 async function readEntitlements() {
   try {
@@ -57,8 +71,78 @@ async function writeEntitlements(obj) {
 
 export async function getPro(userId) {
   if (!userId) return false;
+  // Prefer Supabase if configured
+  if (supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('entitlements')
+        .select('status')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (error) throw error;
+      return data ? String(data.status).toLowerCase() === 'active' : false;
+    } catch (e) {
+      console.warn('[entitlements] supabase getPro failed, falling back to JSON:', e?.message || e);
+    }
+  }
   const ent = await readEntitlements();
-  return Boolean(ent[userId]);
+  const rec = ent[userId];
+  return rec === true || (rec && (rec.status === 'active' || rec.pro === true));
+}
+
+async function upsertEntitlement({ userId, status = 'active', priceId = '', stripeCustomerId = '', currentPeriodEnd = null }) {
+  if (!userId) return;
+  if (supabaseAdmin) {
+    try {
+      const payload = { user_id: userId, status, price_id: priceId || null, stripe_customer_id: stripeCustomerId || null, current_period_end: currentPeriodEnd };
+      const { error } = await supabaseAdmin.from('entitlements').upsert(payload, { onConflict: 'user_id' });
+      if (error) throw error;
+      return;
+    } catch (e) {
+      console.warn('[entitlements] supabase upsert failed, falling back to JSON:', e?.message || e);
+    }
+  }
+  const map = await readEntitlements();
+  map[userId] = { pro: status === 'active', status, priceId, stripeCustomerId, currentPeriodEnd };
+  await writeEntitlements(map);
+}
+
+async function setProJSON(userId, pro) {
+  const map = await readEntitlements();
+  map[userId] = pro;
+  await writeEntitlements(map);
+}
+
+async function readProcessedEvents() {
+  try {
+    const buf = await fs.readFile(EVENTS_PATH, 'utf8');
+    const obj = JSON.parse(buf);
+    return new Set(Array.isArray(obj) ? obj : obj.ids || []);
+  } catch {
+    return new Set();
+  }
+}
+
+async function writeProcessedEvents(set) {
+  const dir = path.dirname(EVENTS_PATH);
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(EVENTS_PATH, JSON.stringify(Array.from(set)), 'utf8');
+}
+
+// Optional auth: verify Supabase JWT; set req.userId if valid
+async function authenticate(req, _res, next) {
+  try {
+    const hdr = req.get('authorization') || req.get('Authorization');
+    const token = hdr && hdr.startsWith('Bearer ') ? hdr.slice(7) : '';
+    if (!token || !supabaseAnon) return next();
+    const { data, error } = await supabaseAnon.auth.getUser(token);
+    if (!error && data?.user?.id) {
+      req.userId = data.user.id;
+    }
+  } catch (e) {
+    // ignore
+  }
+  return next();
 }
 
 // Webhook must use raw body
@@ -70,16 +154,56 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
   if (!sig) return res.status(400).json({ error: 'Missing Stripe signature' });
   try {
     const event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      const userId = session?.metadata?.userId;
-      if (userId) {
-        const ent = await readEntitlements();
-        ent[userId] = true;
-        await writeEntitlements(ent);
+
+    // Idempotency guard
+    const processed = await readProcessedEvents();
+    if (processed.has(event.id)) {
+      return res.json({ received: true, duplicate: true });
+    }
+
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object;
+        const userId = session?.metadata?.userId;
+        const priceId = session?.line_items?.[0]?.price?.id || session?.metadata?.priceId || '';
+        // If expand not enabled, rely on subscription retrieval later
+        const stripeCustomerId = (session?.customer && typeof session.customer === 'string') ? session.customer : '';
+        if (userId) {
+          await upsertEntitlement({ userId, status: 'active', priceId, stripeCustomerId });
+        }
+        break;
+      }
+      case 'customer.subscription.updated':
+      case 'customer.subscription.created': {
+        const sub = event.data.object;
+        const status = sub?.status || 'active';
+        const priceId = sub?.items?.data?.[0]?.price?.id || '';
+        const stripeCustomerId = (sub?.customer && typeof sub.customer === 'string') ? sub.customer : '';
+        // Attempt to recover our userId via metadata on latest_invoice or stored mapping
+        const userId = sub?.metadata?.userId || '';
+        if (userId) {
+          await upsertEntitlement({ userId, status, priceId, stripeCustomerId, currentPeriodEnd: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null });
+        }
+        break;
+      }
+      case 'customer.subscription.deleted': {
+        const sub = event.data.object;
+        const userId = sub?.metadata?.userId || '';
+        const priceId = sub?.items?.data?.[0]?.price?.id || '';
+        const stripeCustomerId = (sub?.customer && typeof sub.customer === 'string') ? sub.customer : '';
+        if (userId) {
+          await upsertEntitlement({ userId, status: 'canceled', priceId, stripeCustomerId });
+        }
+        break;
+      }
+      default: {
+        // ignore
       }
     }
-    res.json({ received: true });
+
+    processed.add(event.id);
+    await writeProcessedEvents(processed);
+    return res.json({ received: true });
   } catch (err) {
     console.error('[stripe] webhook error:', err?.message || err);
     return res.status(400).json({ error: 'Webhook Error', details: String(err?.message || err) });
@@ -88,6 +212,7 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
 
 // JSON parser comes AFTER the webhook to keep raw body available there
 app.use(express.json({ limit: '2mb' }));
+app.use(authenticate);
 
 const limiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
 app.use('/api/', limiter);
@@ -99,11 +224,17 @@ app.use('/api/ai', aiRouter);
 app.post('/api/stripe/create-checkout-session', async (req, res) => {
   try {
     if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
-    const { priceId, userId, successPath = '/pricing?success=1', cancelPath = '/pricing?canceled=1' } = req.body || {};
+    const { priceId, userId: userIdBody, successPath = '/pricing?success=1', cancelPath = '/pricing?canceled=1' } = req.body || {};
 
-    // Fallback to env STRIPE_PRICE_ID if priceId not supplied
-    const effectivePriceId = String(priceId || STRIPE_PRICE_ID || '').trim();
-    if (!effectivePriceId) return res.status(400).json({ error: 'Missing priceId' });
+    const allowedPrices = [STRIPE_PRICE_ID, STRIPE_PRICE_PRO, STRIPE_PRICE_TEAMS].filter(Boolean);
+    const requested = String(priceId || STRIPE_PRICE_ID || '').trim();
+    if (!requested) return res.status(400).json({ error: 'Missing priceId' });
+    if (allowedPrices.length && !allowedPrices.includes(requested)) {
+      return res.status(400).json({ error: 'Invalid priceId' });
+    }
+
+    const effectivePriceId = requested;
+    const userId = req.userId || (userIdBody ? String(userIdBody) : undefined);
 
     const session = await stripe.checkout.sessions.create({
       // Use subscription by default; switch to 'payment' if you prefer one-time
@@ -113,7 +244,8 @@ app.post('/api/stripe/create-checkout-session', async (req, res) => {
       ],
       success_url: `${APP_URL}${successPath}`,
       cancel_url: `${APP_URL}${cancelPath}`,
-      metadata: userId ? { userId: String(userId) } : undefined,
+      client_reference_id: userId || undefined,
+      metadata: userId ? { userId: String(userId), priceId: effectivePriceId } : { priceId: effectivePriceId },
     });
     return res.json({ url: session.url });
   } catch (e) {
@@ -125,7 +257,7 @@ app.post('/api/stripe/create-checkout-session', async (req, res) => {
 // Entitlement check
 app.get('/api/pro/me', async (req, res) => {
   try {
-    const userId = req.get('x-user-id') || '';
+  const userId = req.userId || '';
     const pro = await getPro(userId);
     return res.json({ pro });
   } catch (e) {
