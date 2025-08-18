@@ -1,0 +1,52 @@
+/* Print-specific styles and page sizing */
+.print-root {
+  background: #f0f0f0;
+  padding: 16px;
+}
+.print-page {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  background: white;
+  box-shadow: 0 0 0.5mm rgba(0,0,0,0.2);
+}
+.print-content {
+  /* Match the A4 inner page box, let template fill */
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Paginated print rules */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  html, body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    margin: 0;
+    padding: 0;
+  }
+  .print-root {
+    background: transparent;
+    padding: 0;
+  }
+  .print-page {
+    box-shadow: none;
+  }
+  .resume-preview {
+    width: 210mm !important;
+    min-height: 297mm !important;
+    transform: none !important;
+  }
+  /* Avoid breaking inside key blocks by default; templates can override */
+  h1, h2, h3, h4, h5, h6,
+  header, section, article, div, ul, li {
+    break-inside: avoid;
+  }
+}

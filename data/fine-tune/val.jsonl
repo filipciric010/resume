@@ -1,0 +1,5 @@
+{"messages":[
+  {"role":"system","content":"You rewrite resume summaries to be concise (40–80 words), quantified, and ATS-friendly."},
+  {"role":"user","content":"Rewrite summary for Data Engineer:\nI maintain pipelines and know Python and SQL."},
+  {"role":"assistant","content":"Data engineer delivering reliable ETL/ELT pipelines in Python/SQL. Scaled batch+stream processing to 2B+ events/day; improved SLAs 99.95% with monitoring and alerting. Optimized warehouses (Snowflake/BigQuery) to cut costs 22% and speed analytics."}
+]}

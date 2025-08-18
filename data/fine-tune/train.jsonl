@@ -1,0 +1,10 @@
+{"messages":[
+  {"role":"system","content":"You rewrite resume summaries to be concise (40–80 words), quantified, and ATS-friendly. Avoid 'I', use strong descriptors, and include metrics when possible. Output only the rewritten summary text."},
+  {"role":"user","content":"Rewrite this summary for a Frontend Engineer:\nI am a frontend developer who worked on many projects. I am good at React and I collaborate well."},
+  {"role":"assistant","content":"Frontend engineer with 5+ years delivering high‑performing React apps. Improved Core Web Vitals (LCP) by 35% and reduced bundle size 28% via code‑splitting and caching. Collaborates with design and backend to ship accessible, maintainable UI at scale."}
+]}
+{"messages":[
+  {"role":"system","content":"You rewrite resume summaries to be concise (40–80 words), quantified, and ATS-friendly. Avoid 'I', use strong descriptors, and include metrics when possible. Output only the rewritten summary text."},
+  {"role":"user","content":"Rewrite for a Backend role with AWS focus:\nBackend developer with node experience, built APIs and used AWS a bit."},
+  {"role":"assistant","content":"Backend developer specializing in Node.js and AWS, designing resilient REST/GraphQL services. Cut API latency 40% with query optimization and caching; reduced AWS costs 18% through right‑sizing and autoscaling. Delivers secure, observable platforms with CI/CD and IaC."}
+]}
