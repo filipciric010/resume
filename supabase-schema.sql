@@ -95,3 +95,39 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Entitlements table for Pro access
+CREATE TABLE IF NOT EXISTS public.entitlements (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'active', -- active | canceled | past_due
+  price_id TEXT,
+  stripe_customer_id TEXT,
+  current_period_end TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::TEXT, NOW()) NOT NULL
+);
+
+ALTER TABLE public.entitlements ENABLE ROW LEVEL SECURITY;
+
+-- Only the owner can read their entitlement; updates by service role
+CREATE POLICY "Users can view own entitlement" ON public.entitlements
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- Optional: prevent clients from writing; handled by server/service role
+CREATE POLICY "No client inserts" ON public.entitlements
+  FOR INSERT WITH CHECK (false);
+CREATE POLICY "No client updates" ON public.entitlements
+  FOR UPDATE USING (false);
+CREATE POLICY "No client deletes" ON public.entitlements
+  FOR DELETE USING (false);
+
+CREATE OR REPLACE FUNCTION public.handle_updated_at_entitlements()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = TIMEZONE('utc'::TEXT, NOW());
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_updated_at_entitlements
+  BEFORE UPDATE ON public.entitlements
+  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at_entitlements();
