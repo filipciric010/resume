@@ -8,6 +8,8 @@ import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs/promises';
+import Stripe from 'stripe';
 import aiRouter from './aiRouter.mjs';
 
 const app = express();
@@ -23,13 +25,113 @@ const FETCH_TIMEOUT_MS = Number(process.env.FETCH_TIMEOUT_MS || 20000);
 // Middleware
 app.use(helmet());
 app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }));
-app.use(express.json({ limit: '2mb' }));
+// IMPORTANT: We mount the Stripe webhook (raw body) BEFORE JSON parser below
 app.use(morgan('tiny'));
+
+// ===== Stripe integration =====
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
+const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID || '';
+const APP_URL = process.env.APP_URL || 'http://localhost:8080';
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
+const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' }) : null;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ENTITLEMENTS_PATH = path.resolve(__dirname, '..', 'data', 'entitlements.json');
+
+async function readEntitlements() {
+  try {
+    const buf = await fs.readFile(ENTITLEMENTS_PATH, 'utf8');
+    return JSON.parse(buf);
+  } catch (e) {
+    // If not found, return empty map
+    return {};
+  }
+}
+
+async function writeEntitlements(obj) {
+  const dir = path.dirname(ENTITLEMENTS_PATH);
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(ENTITLEMENTS_PATH, JSON.stringify(obj, null, 2), 'utf8');
+}
+
+export async function getPro(userId) {
+  if (!userId) return false;
+  const ent = await readEntitlements();
+  return Boolean(ent[userId]);
+}
+
+// Webhook must use raw body
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  if (!stripe || !STRIPE_WEBHOOK_SECRET) {
+    return res.status(503).json({ error: 'Stripe not configured' });
+  }
+  const sig = req.headers['stripe-signature'];
+  if (!sig) return res.status(400).json({ error: 'Missing Stripe signature' });
+  try {
+    const event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      const userId = session?.metadata?.userId;
+      if (userId) {
+        const ent = await readEntitlements();
+        ent[userId] = true;
+        await writeEntitlements(ent);
+      }
+    }
+    res.json({ received: true });
+  } catch (err) {
+    console.error('[stripe] webhook error:', err?.message || err);
+    return res.status(400).json({ error: 'Webhook Error', details: String(err?.message || err) });
+  }
+});
+
+// JSON parser comes AFTER the webhook to keep raw body available there
+app.use(express.json({ limit: '2mb' }));
 
 const limiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
 app.use('/api/', limiter);
 // Mount unified AI router
 app.use('/api/ai', aiRouter);
+
+// Create Checkout Session (supports dynamic priceId and optional redirect paths)
+// body: { priceId?: string, userId?: string, successPath?: string, cancelPath?: string }
+app.post('/api/stripe/create-checkout-session', async (req, res) => {
+  try {
+    if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
+    const { priceId, userId, successPath = '/pricing?success=1', cancelPath = '/pricing?canceled=1' } = req.body || {};
+
+    // Fallback to env STRIPE_PRICE_ID if priceId not supplied
+    const effectivePriceId = String(priceId || STRIPE_PRICE_ID || '').trim();
+    if (!effectivePriceId) return res.status(400).json({ error: 'Missing priceId' });
+
+    const session = await stripe.checkout.sessions.create({
+      // Use subscription by default; switch to 'payment' if you prefer one-time
+      mode: 'subscription',
+      line_items: [
+        { price: effectivePriceId, quantity: 1 },
+      ],
+      success_url: `${APP_URL}${successPath}`,
+      cancel_url: `${APP_URL}${cancelPath}`,
+      metadata: userId ? { userId: String(userId) } : undefined,
+    });
+    return res.json({ url: session.url });
+  } catch (e) {
+    console.error('[stripe] create session failed:', e);
+    return res.status(500).json({ error: 'Failed to create checkout session', details: String(e?.message || e) });
+  }
+});
+
+// Entitlement check
+app.get('/api/pro/me', async (req, res) => {
+  try {
+    const userId = req.get('x-user-id') || '';
+    const pro = await getPro(userId);
+    return res.json({ pro });
+  } catch (e) {
+    return res.json({ pro: false });
+  }
+});
 
 // PDF generation endpoint
 const pdfRequestSchema = z.object({
@@ -401,8 +503,6 @@ app.get('/', (_req, res) => {
 
 // Static serve if dist exists (production)
 try {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
   const distPath = path.resolve(__dirname, '..', 'dist');
   app.use(express.static(distPath));
   app.get('*', (req, res, next) => {

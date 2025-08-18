@@ -17,6 +17,7 @@ import {
   
 } from 'lucide-react';
 import CoverLetterSection from '@/components/CoverLetterSection';
+import PricingSection from '@/components/sections/PricingSection';
 import ATSCheckSection from '@/components/ATSCheckSection';
 
 const Index = () => {
@@ -268,6 +269,9 @@ const Index = () => {
           </Card>
         </div>
       </section>
+
+  {/* Pricing Section */}
+  <PricingSection />
 
   {/* CTA Section */}
   <section className="container mx-auto px-4 py-20">
