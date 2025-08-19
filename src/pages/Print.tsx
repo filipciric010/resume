@@ -43,19 +43,60 @@ export default function PrintPage() {
   const data = payload.resumeData ?? store?.data;
   const templateKey = payload.templateKey ?? data?.templateKey ?? 'modern';
 
+  // Debug logging
+  console.log('[print-page] Payload received:', {
+    hasPayload: !!payload,
+    hasResumeData: !!payload.resumeData,
+    hasStoreData: !!store?.data,
+    finalData: !!data,
+    templateKey,
+    profileName: data?.profile?.fullName
+  });
+
   useEffect(() => {
     let cancelled = false;
     const prep = async () => {
+      console.log('[print-page] Starting print preparation...');
       try {
         // Ensure web fonts are fully loaded so text metrics match preview
         const fontSet = (document as unknown as { fonts?: FontFaceSet }).fonts;
-        await fontSet?.ready;
-      } catch {
-        // ignore
+        if (fontSet) {
+          console.log('[print-page] Waiting for fonts to load...');
+          await fontSet.ready;
+          console.log('[print-page] Fonts loaded successfully');
+        }
+      } catch (error) {
+        console.warn('[print-page] Font loading failed:', error);
       }
-      // Small delay to allow final layout/paint
-      await new Promise((r) => setTimeout(r, 50));
-      if (!cancelled) setReady(true);
+      
+      // Wait for content to be rendered
+      console.log('[print-page] Waiting for content to be rendered...');
+      let contentCheckAttempts = 0;
+      const maxAttempts = 50; // 5 seconds max
+      
+      while (contentCheckAttempts < maxAttempts && !cancelled) {
+        const templates = document.querySelectorAll('[class*="template"], .resume-preview');
+        const hasContent = Array.from(templates).some(template => 
+          template.textContent && template.textContent.trim().length > 100
+        );
+        
+        if (hasContent) {
+          console.log('[print-page] Content detected, templates found:', templates.length);
+          break;
+        }
+        
+        await new Promise((r) => setTimeout(r, 100));
+        contentCheckAttempts++;
+      }
+      
+      // Additional delay for layout/paint
+      console.log('[print-page] Waiting for layout to settle...');
+      await new Promise((r) => setTimeout(r, 200));
+      
+      if (!cancelled) {
+        console.log('[print-page] Setting ready state to true');
+        setReady(true);
+      }
     };
     prep();
     return () => { cancelled = true; };
@@ -78,12 +119,28 @@ export default function PrintPage() {
   }
 
   return (
-    <div className="print-root" data-print-ready={ready ? 'true' : undefined}>
+    <div className="print-root" data-print-ready={ready ? 'true' : 'false'}>
       <div className="print-page">
         <div className="print-content">
           <Template data={data} />
         </div>
       </div>
+      {/* Debug indicator - will be hidden in print CSS */}
+      {!ready && (
+        <div style={{ 
+          position: 'fixed', 
+          top: '10px', 
+          left: '10px', 
+          background: 'orange', 
+          color: 'white', 
+          padding: '5px 10px', 
+          borderRadius: '3px',
+          fontSize: '12px',
+          zIndex: 9999 
+        }}>
+          Loading for PDF...
+        </div>
+      )}
     </div>
   );
 }

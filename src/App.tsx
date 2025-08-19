@@ -12,6 +12,7 @@ import ATS from "./pages/ATS";
 import CoverLetter from "./pages/CoverLetter";
 import Templates from "./pages/Templates";
 import Share from "./pages/Share";
+import Print from "./pages/Print";
 import NotFound from "./pages/NotFound";
 import { AuthPage } from "./components/auth/AuthPage";
 import AuthCallback from "./pages/AuthCallback";
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/coverletter" element={<Navigate to="/cover-letter" replace />} />
               <Route path="/templates" element={<Templates />} />
               <Route path="/share/:slug" element={<Share />} />
+              <Route path="/print" element={<Print />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

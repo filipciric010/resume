@@ -17,16 +17,26 @@ export const StickyActions: React.FC = () => {
     }
     
     setIsGenerating(true);
+    console.log('[pdf-download] Starting PDF generation with data:', {
+      hasProfile: !!data.profile,
+      profileName: data.profile?.fullName,
+      templateKey: data.templateKey,
+      experienceCount: data.experience?.length || 0
+    });
+    
     try {
-      // Prefer server-rendered PDF if server is available
-      let success = await generateServerPDF(data, data.templateKey);
+      // TEMPORARILY: Skip server PDF and try client-side first for debugging
+      console.log('[pdf-download] Trying client-side PDF generation first...');
+      let success = await downloadPDF(data, data.templateKey);
+      
       if (!success) {
-        // Try high-quality client PDF
+        console.log('[pdf-download] Client PDF failed, trying server PDF...');
+        success = await generateServerPDF(data, data.templateKey);
+      }
+      
+      if (!success) {
+        console.log('[pdf-download] Server PDF failed, trying high-quality client PDF...');
         success = await downloadPDFHighQuality(data);
-        if (!success) {
-          console.log('High-quality PDF failed, trying regular version...');
-          success = await downloadPDF(data, data.templateKey);
-        }
       }
       
       if (success) {

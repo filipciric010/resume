@@ -1,0 +1,132 @@
+{
+  "profile": {
+    "fullName": "Sarah Johnson",
+    "email": "sarah.johnson@email.com",
+    "phone": "+1 (555) 987-6543",
+    "location": "New York, NY",
+    "headline": "Senior Software Engineer",
+    "summary": "Experienced software engineer with 6+ years building scalable web applications and leading development teams. Passionate about creating efficient solutions and mentoring junior developers.",
+    "links": [
+      "https://sarahjohnson.dev",
+      "linkedin.com/in/sarahjohnson",
+      "github.com/sarahjohnson"
+    ]
+  },
+  "experience": [
+    {
+      "id": "exp-1",
+      "role": "Senior Software Engineer",
+      "company": "Tech Solutions Inc.",
+      "start": "2021-03",
+      "end": "",
+      "bullets": [
+        {
+          "id": "bullet-1-1",
+          "text": "Led development of microservices architecture serving 5M+ users with 99.9% uptime"
+        },
+        {
+          "id": "bullet-1-2",
+          "text": "Reduced deployment time by 70% through implementation of CI/CD pipelines and automated testing"
+        },
+        {
+          "id": "bullet-1-3",
+          "text": "Mentored team of 5 junior developers, resulting in 40% faster onboarding and improved code quality"
+        }
+      ]
+    },
+    {
+      "id": "exp-2",
+      "role": "Full Stack Developer",
+      "company": "Digital Innovations",
+      "start": "2019-01",
+      "end": "2021-02",
+      "bullets": [
+        {
+          "id": "bullet-2-1",
+          "text": "Built responsive web applications using React and Node.js, increasing user engagement by 35%"
+        },
+        {
+          "id": "bullet-2-2",
+          "text": "Optimized database queries and implemented caching strategies, reducing page load times by 50%"
+        },
+        {
+          "id": "bullet-2-3",
+          "text": "Collaborated with design team to implement pixel-perfect UI components and design system"
+        }
+      ]
+    }
+  ],
+  "education": [
+    {
+      "id": "edu-1",
+      "school": "Massachusetts Institute of Technology",
+      "degree": "Bachelor of Science in Computer Science",
+      "start": "2015-09",
+      "end": "2019-05"
+    },
+    {
+      "id": "edu-2",
+      "school": "Google Cloud",
+      "degree": "Professional Cloud Architect Certification",
+      "start": "2022-01",
+      "end": "2022-03"
+    }
+  ],
+  "skills": [
+    {
+      "id": "skill-1",
+      "name": "JavaScript",
+      "level": "expert"
+    },
+    {
+      "id": "skill-2",
+      "name": "React",
+      "level": "expert"
+    },
+    {
+      "id": "skill-3",
+      "name": "Node.js",
+      "level": "advanced"
+    },
+    {
+      "id": "skill-4",
+      "name": "Python",
+      "level": "advanced"
+    },
+    {
+      "id": "skill-5",
+      "name": "AWS",
+      "level": "intermediate"
+    },
+    {
+      "id": "skill-6",
+      "name": "Docker",
+      "level": "intermediate"
+    }
+  ],
+  "projects": [
+    {
+      "id": "proj-1",
+      "name": "E-Learning Platform",
+      "description": "Full-stack learning management system with video streaming, progress tracking, and interactive quizzes serving 10K+ students",
+      "technologies": ["React", "Node.js", "PostgreSQL", "AWS S3", "Socket.io"],
+      "url": "https://elearning-platform.com"
+    },
+    {
+      "id": "proj-2",
+      "name": "Real-time Chat Application",
+      "description": "Scalable chat application with real-time messaging, file sharing, and video calls using WebRTC technology",
+      "technologies": ["Vue.js", "Express", "MongoDB", "WebRTC", "Redis"],
+      "url": "https://chat-app-demo.com"
+    }
+  ],
+  "certifications": [
+    "AWS Solutions Architect Associate",
+    "Google Cloud Professional Cloud Architect",
+    "Certified Kubernetes Administrator"
+  ],
+  "templateKey": "modern"
+}
+
+
+

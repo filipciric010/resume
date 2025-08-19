@@ -15,11 +15,12 @@
     "allowJs": true,
     "noUnusedLocals": false,
     "strictNullChecks": false,
+    "module": "esnext",
     "moduleResolution": "bundler",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "jsx": "react-jsx",
     "jsxImportSource": "react",
-  "types": ["node", "vite/client", "vitest"]
+    "types": ["node", "vite/client", "vitest"]
   }
 }

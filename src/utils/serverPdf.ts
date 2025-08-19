@@ -4,7 +4,10 @@ export async function generateServerPDF(resumeData: ResumeData, templateKey?: st
   try {
     const res = await fetch('/api/pdf', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Origin': window.location.origin
+      },
       body: JSON.stringify({ resumeData, templateKey, clientOrigin: window.location.origin }),
     });
     const ct = res.headers.get('content-type') || '';

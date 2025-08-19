@@ -17,6 +17,9 @@ import { useResume } from '@/store/useResume';
 import { useATS } from '@/store/useATS';
 import { SAMPLE_RESUME, SAMPLE_JD } from '@/demo/sample';
 import { GuidelineTips } from '@/components/GuidelineTips';
+import ImportResumeModal from '@/components/editor/ImportResumeModal';
+import ImportJsonModal from '@/components/editor/ImportJsonModal';
+import { Upload, FileJson } from 'lucide-react';
 
 const Editor = () => {
   const navigate = useNavigate();
@@ -36,6 +39,8 @@ const Editor = () => {
   const handleAuthSuccess = () => {
     setShowAuthModal(false);
   };
+  const [importOpen, setImportOpen] = useState(false);
+  const [importJsonOpen, setImportJsonOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -57,13 +62,13 @@ const Editor = () => {
       )}
       
       {/* AI Banner */}
-      <div className="container mx-auto px-4 py-2 print-hide">
+  <div className="container mx-auto px-4 py-2 print-hide">
         <AIBanner />
       </div>
 
       {/* Guidelines quick access */}
       <div className="container mx-auto px-4 pb-0 print-hide">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="outline" className="w-full sm:w-auto">
@@ -74,6 +79,16 @@ const Editor = () => {
               <GuidelineTips />
             </SheetContent>
           </Sheet>
+
+          <Button variant="secondary" className="w-full sm:w-auto" onClick={() => setImportOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Import Resume
+          </Button>
+
+          <Button variant="outline" className="w-full sm:w-auto" onClick={() => setImportJsonOpen(true)}>
+            <FileJson className="mr-2 h-4 w-4" />
+            Import JSON
+          </Button>
         </div>
       </div>
       
@@ -101,6 +116,9 @@ const Editor = () => {
 
       {/* Floating Actions */}
       <StickyActions />
+
+  <ImportResumeModal open={importOpen} onClose={() => setImportOpen(false)} />
+  <ImportJsonModal open={importJsonOpen} onClose={() => setImportJsonOpen(false)} />
       
       {showAuthModal && (
         <AuthModal

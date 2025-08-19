@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
 import Stripe from 'stripe';
 import aiRouter from './aiRouter.mjs';
+import mountImportEndpoint from './importResume.mjs';
 import { createClient } from '@supabase/supabase-js';
 
 const app = express();
@@ -20,7 +21,7 @@ const PORT = process.env.PORT || 3001;
 // CORS: lock to explicit origins. In prod, set CLIENT_ORIGIN to a comma-separated
 // list of allowed origins (e.g., https://app.example.com,https://www.example.com).
 // Never use '*' here.
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:8080';
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:8080,http://localhost:8081';
 const ALLOWED_ORIGINS = CLIENT_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
@@ -232,6 +233,9 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
   }
 });
 
+// Mount import endpoint BEFORE JSON parser to avoid body parsing conflicts
+mountImportEndpoint(app);
+
 // JSON parser comes AFTER the webhook to keep raw body available there
 app.use(express.json({ limit: '2mb' }));
 app.use(authenticate);
@@ -298,8 +302,29 @@ const pdfRequestSchema = z.object({
 
 function resolveAllowedOrigin(req, requested) {
   const headerOrigin = req.get('origin');
+  
+  // First priority: requested origin if it's allowed
   if (requested && ALLOWED_ORIGINS.includes(requested)) return requested;
+  
+  // Second priority: request header origin if it's allowed
   if (headerOrigin && ALLOWED_ORIGINS.includes(headerOrigin)) return headerOrigin;
+  
+  // Third priority: try to detect the correct port by checking if it's available
+  // Default to 8081 if 8080 is not available (common in dev when port is taken)
+  const referer = req.get('referer');
+  if (referer) {
+    try {
+      const refererOrigin = new URL(referer).origin;
+      if (ALLOWED_ORIGINS.includes(refererOrigin)) return refererOrigin;
+    } catch {}
+  }
+  
+  // Fallback: prefer 8080 over 8081 in dev (since app is running on 8080)
+  const preferredOrder = ['http://localhost:8080', 'http://localhost:8081'];
+  for (const origin of preferredOrder) {
+    if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  }
+  
   return ALLOWED_ORIGINS[0];
 }
 
@@ -316,6 +341,12 @@ app.post('/api/pdf', async (req, res) => {
   const url = `${origin}/print`;
   console.log('[PDF] Using client origin:', origin);
   console.log('[PDF] Navigating to:', url);
+  console.log('[PDF] Payload data:', {
+    hasResumeData: !!resumeData,
+    profileName: resumeData?.profile?.fullName,
+    templateKey,
+    experienceCount: resumeData?.experience?.length || 0
+  });
 
     // Simple concurrency cap to avoid resource exhaustion
     if (!globalThis.__PDF_SEM__) {
@@ -344,6 +375,11 @@ app.post('/api/pdf', async (req, res) => {
     });
     const page = await browser.newPage();
     await page.evaluateOnNewDocument((pl) => {
+      console.log('[puppeteer] Setting window.__PRINT_PAYLOAD__:', {
+        hasPayload: !!pl,
+        hasResumeData: !!pl?.resumeData,
+        profileName: pl?.resumeData?.profile?.fullName
+      });
       window.__PRINT_PAYLOAD__ = pl;
     }, payload);
   await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
@@ -371,9 +407,55 @@ app.post('/api/pdf', async (req, res) => {
     });
   }
   // In dev, HMR/websockets can keep connections open; rely on DOM ready + our print-ready flag
+  console.log('[PDF] Navigating to print page...');
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    // Wait for print-ready flag
-  await page.waitForSelector('[data-print-ready="true"]', { timeout: 25000 });
+  console.log('[PDF] Page loaded, waiting for print-ready flag...');
+  
+  // Check if the element exists first
+  const printRootExists = await page.$('[class*="print-root"]');
+  console.log('[PDF] Print root element exists:', !!printRootExists);
+  
+  // Wait for print-ready flag with better error reporting
+  try {
+    await page.waitForSelector('[data-print-ready="true"]', { timeout: 15000 });
+    console.log('[PDF] Print-ready flag detected successfully');
+    
+    // Additional wait for content to be fully rendered
+    console.log('[PDF] Waiting for content to be fully rendered...');
+    await page.waitForFunction(() => {
+      const templates = document.querySelectorAll('[class*="template"], .resume-preview');
+      const hasContent = Array.from(templates).some(template => 
+        template.textContent && template.textContent.trim().length > 100
+      );
+      return hasContent;
+    }, { timeout: 10000 });
+    
+    console.log('[PDF] Content rendering confirmed');
+    
+    // Extra delay to ensure all styles and fonts are applied
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+  } catch (timeoutError) {
+    // Get current state for debugging
+    const currentState = await page.evaluate(() => {
+      const printRoot = document.querySelector('[class*="print-root"]');
+      const templates = document.querySelectorAll('[class*="template"], .resume-preview');
+      const contentLength = Array.from(templates).reduce((total, el) => 
+        total + (el.textContent?.length || 0), 0
+      );
+      
+      return {
+        printRootExists: !!printRoot,
+        printReadyValue: printRoot?.getAttribute('data-print-ready'),
+        hasResumeData: !!document.querySelector('[class*="template"]'),
+        templateCount: templates.length,
+        totalContentLength: contentLength,
+        bodyContent: document.body.innerHTML.substring(0, 500)
+      };
+    });
+    console.error('[PDF] Print-ready or content timeout. Current state:', currentState);
+    throw timeoutError;
+  }
 
     const pdfBuffer = await page.pdf({
       width: '210mm',
