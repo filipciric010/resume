@@ -29,6 +29,11 @@ const Editor = () => {
   const { setJobDescription } = useATS();
 
   useEffect(() => {
+    // In demo mode, skip authentication check
+    if (import.meta.env.VITE_DEMO === 'true') {
+      return;
+    }
+    
     // Check authentication first
     if (!user) {
       setShowAuthModal(true);

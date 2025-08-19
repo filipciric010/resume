@@ -3,6 +3,13 @@ import { supabase } from '@/lib/supabase';
 
 export async function createCheckout(priceId: string) {
   if (!priceId) throw new Error('priceId is required');
+  
+  // In demo mode, simulate checkout
+  if (import.meta.env.VITE_DEMO === 'true') {
+    throw new Error('Checkout is not available in demo mode. This would normally redirect to Stripe.');
+  }
+  
+  if (!supabase) throw new Error('Authentication not available');
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData?.session?.access_token;
   const res = await fetch('/api/stripe/create-checkout-session', {
@@ -24,6 +31,12 @@ export async function createCheckout(priceId: string) {
 }
 
 export async function hasPro(): Promise<boolean> {
+  // In demo mode, return true to enable all features
+  if (import.meta.env.VITE_DEMO === 'true') {
+    return true;
+  }
+  
+  if (!supabase) return false;
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData?.session?.access_token;
   const res = await fetch('/api/pro/me', {

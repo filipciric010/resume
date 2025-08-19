@@ -14,6 +14,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
   console.debug('[Auth] getSession resolved', { hasSession: !!session });
@@ -46,6 +51,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const fetchProfile = async (userId: string) => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     try {
   console.debug('[Auth] Fetching profile for', userId);
       const { data, error } = await supabase
@@ -69,6 +79,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
+    if (!supabase) {
+      return { error: { message: 'Authentication not available' } as AuthError };
+    }
+
     try {
       setLoading(true);
       const { data, error } = await supabase.auth.signUp({
@@ -96,6 +110,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signIn = async (email: string, password: string) => {
+    if (!supabase) {
+      return { error: { message: 'Authentication not available' } as AuthError };
+    }
+
     try {
   console.debug('[Auth] signIn called');
       setLoading(true);
@@ -124,7 +142,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           resolve({ error: null });
         }, 5000);
       });
-      const signOutPromise = supabase.auth.signOut().then(({ error }) => {
+      const signOutPromise = supabase?.auth.signOut().then(({ error }) => {
         console.debug('[Auth] supabase.auth.signOut resolved', { hasError: !!error });
         return { error };
       });
@@ -147,6 +165,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signInWithGoogle = async () => {
+    if (!supabase) {
+      return { error: { message: 'Authentication not available' } as AuthError };
+    }
+
     try {
   console.debug('[Auth] signInWithGoogle called');
   setLoading(true);
@@ -167,7 +189,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user) return;
+    if (!user || !supabase) return;
 
     const { error } = await supabase
       .from('profiles')

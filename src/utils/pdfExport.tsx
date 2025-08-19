@@ -11,7 +11,7 @@ const A4_HEIGHT_PX = Math.round((A4_HEIGHT_MM / 25.4) * 96); // ~1123px at 96 DP
 // Main export function - simplified and reliable
 export async function downloadPDF(data: ResumeData, templateKey: string = 'modern'): Promise<boolean> {
   try {
-    console.log('🔍 Starting PDF generation...');
+    console.log('Starting PDF generation...');
     
     // Find the resume preview element
   // Capture the inner A4 content to avoid outer shadow padding
@@ -103,7 +103,7 @@ export async function downloadPDF(data: ResumeData, templateKey: string = 'moder
 // Alternative function for enhanced quality
 export async function downloadPDFHighQuality(data: ResumeData): Promise<boolean> {
   try {
-    console.log('🔍 Starting high-quality PDF generation...');
+    console.log('Starting high-quality PDF generation...');
     
   const previewElement = document.querySelector('[data-resume-content="true"]') as HTMLElement;
     

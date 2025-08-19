@@ -26,6 +26,12 @@ const Index = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const handleProtectedNavigation = (path: string) => {
+    // In demo mode, allow direct navigation without authentication
+    if (import.meta.env.VITE_DEMO === 'true') {
+      navigate(path);
+      return;
+    }
+    
     if (user) {
       navigate(path);
     } else {

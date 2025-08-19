@@ -4,18 +4,25 @@ import { ResumeData } from '@/store/useResume';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// In development, allow app to run without Supabase (features will be disabled)
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+  if (import.meta.env.PROD) {
+    throw new Error('Missing Supabase environment variables');
+  } else {
+    console.warn('⚠️ Supabase not configured - auth features will be disabled');
+  }
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    flowType: 'pkce',
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-});
+export const supabase = (supabaseUrl && supabaseAnonKey) 
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        flowType: 'pkce',
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
+  : null;
 
 // Database types
 export interface Database {

@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Moon, Sun, User, LogOut, Menu } from 'lucide-react';
+import { Moon, Sun, User, LogOut, Menu, TestTube } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -205,6 +205,17 @@ export const TopBar: React.FC = () => {
 
   return (
     <div className="border-b bg-background">
+      {/* Demo Mode Banner */}
+      {import.meta.env.VITE_DEMO === 'true' && (
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 text-center text-sm">
+          <div className="flex items-center justify-center gap-2">
+            <TestTube className="w-4 h-4" />
+            <span className="font-medium">Demo Mode</span>
+            <span>•</span>
+            <span>All features unlocked - No login required</span>
+          </div>
+        </div>
+      )}
       <nav className="container mx-auto px-4 py-4 md:py-6">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center space-x-2 min-w-0">
@@ -223,7 +234,12 @@ export const TopBar: React.FC = () => {
             {/* Navigation buttons based on current page */}
             {getNavigationButtons()}
 
-            {user ? (
+            {import.meta.env.VITE_DEMO === 'true' ? (
+              <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-sm">
+                <TestTube className="w-4 h-4" />
+                <span>Demo User</span>
+              </div>
+            ) : user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
@@ -328,6 +344,11 @@ export const TopBar: React.FC = () => {
                           Sign out
                         </Button>
                       </DrawerClose>
+                    </div>
+                  ) : import.meta.env.VITE_DEMO === 'true' ? (
+                    <div className="flex items-center justify-center gap-2 p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg">
+                      <TestTube className="w-4 h-4" />
+                      <span className="font-medium">Demo User</span>
                     </div>
                   ) : (
                     <DrawerClose asChild>

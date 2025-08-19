@@ -8,6 +8,11 @@ const AuthCallback = () => {
 
   useEffect(() => {
     const handleAuthCallback = async () => {
+      if (!supabase) {
+        navigate('/auth?error=auth_unavailable');
+        return;
+      }
+
       try {
         // Some providers or environments use the hash for tokens (implicit-like flow)
         const hash = window.location.hash;

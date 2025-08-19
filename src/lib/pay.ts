@@ -13,6 +13,12 @@ export async function startCheckout(priceId: string, userId?: string) {
 import { supabase } from '@/lib/supabase';
 
 export async function hasPro(): Promise<boolean> {
+  // In demo mode, return true to enable all features
+  if (import.meta.env.VITE_DEMO === 'true') {
+    return true;
+  }
+  
+  if (!supabase) return false;
   const sessionRes = await supabase.auth.getSession();
   const accessToken = sessionRes?.data?.session?.access_token;
   const r = await fetch('/api/pro/me', {
