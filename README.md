@@ -46,6 +46,17 @@ Defaults:
 - Server API: http://localhost:3001 (Vite proxies /api → server)
 - Demo mode on (VITE_DEMO=true). Click “Load Demo” on the Editor.
 
+## Vercel Deployment (Demo Mode)
+
+Deploy to Vercel with demo mode enabled (no configuration required):
+
+1. Fork this repository
+2. Connect to Vercel
+3. Deploy - the `vercel.json` automatically enables demo mode
+4. Your app will run with all features unlocked!
+
+The included `vercel.json` sets `VITE_DEMO=true` automatically.
+
 ## Production Checklist
 Set these before launch:
 

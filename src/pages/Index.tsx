@@ -19,6 +19,7 @@ import {
 import CoverLetterSection from '@/components/CoverLetterSection';
 import PricingSection from '@/components/sections/PricingSection';
 import ATSCheckSection from '@/components/ATSCheckSection';
+import { isDemoMode } from '@/lib/env';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ const Index = () => {
 
   const handleProtectedNavigation = (path: string) => {
     // In demo mode, allow direct navigation without authentication
-    if (import.meta.env.VITE_DEMO === 'true') {
+    if (isDemoMode()) {
       navigate(path);
       return;
     }

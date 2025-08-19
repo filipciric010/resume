@@ -1,0 +1,26 @@
+{
+  "buildCommand": "VITE_DEMO=true npm run build",
+  "build": {
+    "env": {
+      "VITE_DEMO": "true"
+    }
+  },
+  "env": {
+    "VITE_DEMO": "true"
+  },
+  "functions": {
+    "server/index.mjs": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/server/index.mjs"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

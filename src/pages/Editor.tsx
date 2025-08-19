@@ -20,6 +20,7 @@ import { GuidelineTips } from '@/components/GuidelineTips';
 import ImportResumeModal from '@/components/editor/ImportResumeModal';
 import ImportJsonModal from '@/components/editor/ImportJsonModal';
 import { Upload, FileJson } from 'lucide-react';
+import { isDemoMode } from '@/lib/env';
 
 const Editor = () => {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ const Editor = () => {
 
   useEffect(() => {
     // In demo mode, skip authentication check
-    if (import.meta.env.VITE_DEMO === 'true') {
+    if (isDemoMode()) {
       return;
     }
     
@@ -51,7 +52,7 @@ const Editor = () => {
     <div className="min-h-screen bg-background">
       <TopBar />
 
-      {import.meta.env.VITE_DEMO === 'true' && (
+      {isDemoMode() && (
         <div className="container mx-auto px-4 mt-3 flex justify-end print-hide">
           <Button
             variant="secondary"

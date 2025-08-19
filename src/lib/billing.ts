@@ -1,11 +1,12 @@
 // Lightweight client helpers for Stripe checkout and entitlement checks (JWT-based)
 import { supabase } from '@/lib/supabase';
+import { isDemoMode } from '@/lib/env';
 
 export async function createCheckout(priceId: string) {
   if (!priceId) throw new Error('priceId is required');
   
   // In demo mode, simulate checkout
-  if (import.meta.env.VITE_DEMO === 'true') {
+  if (isDemoMode()) {
     throw new Error('Checkout is not available in demo mode. This would normally redirect to Stripe.');
   }
   
@@ -32,7 +33,7 @@ export async function createCheckout(priceId: string) {
 
 export async function hasPro(): Promise<boolean> {
   // In demo mode, return true to enable all features
-  if (import.meta.env.VITE_DEMO === 'true') {
+  if (isDemoMode()) {
     return true;
   }
   

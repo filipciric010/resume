@@ -11,10 +11,11 @@ export async function startCheckout(priceId: string, userId?: string) {
 }
 
 import { supabase } from '@/lib/supabase';
+import { isDemoMode } from '@/lib/env';
 
 export async function hasPro(): Promise<boolean> {
   // In demo mode, return true to enable all features
-  if (import.meta.env.VITE_DEMO === 'true') {
+  if (isDemoMode()) {
     return true;
   }
   

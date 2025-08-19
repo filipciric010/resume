@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Moon, Sun, User, LogOut, Menu, TestTube } from 'lucide-react';
+import { isDemoMode } from '@/lib/env';
 import { useTheme } from 'next-themes';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -206,7 +207,7 @@ export const TopBar: React.FC = () => {
   return (
     <div className="border-b bg-background">
       {/* Demo Mode Banner */}
-      {import.meta.env.VITE_DEMO === 'true' && (
+      {isDemoMode() && (
         <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 text-center text-sm">
           <div className="flex items-center justify-center gap-2">
             <TestTube className="w-4 h-4" />
@@ -234,7 +235,7 @@ export const TopBar: React.FC = () => {
             {/* Navigation buttons based on current page */}
             {getNavigationButtons()}
 
-            {import.meta.env.VITE_DEMO === 'true' ? (
+            {isDemoMode() ? (
               <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-sm">
                 <TestTube className="w-4 h-4" />
                 <span>Demo User</span>
@@ -345,7 +346,7 @@ export const TopBar: React.FC = () => {
                         </Button>
                       </DrawerClose>
                     </div>
-                  ) : import.meta.env.VITE_DEMO === 'true' ? (
+                  ) : isDemoMode() ? (
                     <div className="flex items-center justify-center gap-2 p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg">
                       <TestTube className="w-4 h-4" />
                       <span className="font-medium">Demo User</span>

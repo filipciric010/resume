@@ -1,16 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { ResumeData } from '@/store/useResume';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+import { getEnvVar, isDemoMode, isProdMode } from '@/lib/env';
 
-// In development, allow app to run without Supabase (features will be disabled)
+const supabaseUrl = getEnvVar('VITE_SUPABASE_URL');
+const supabaseAnonKey = getEnvVar('VITE_SUPABASE_ANON_KEY');
+
+// Allow app to run without Supabase in demo mode or development
 if (!supabaseUrl || !supabaseAnonKey) {
-  if (import.meta.env.PROD) {
-    throw new Error('Missing Supabase environment variables');
-  } else {
-    console.warn('⚠️ Supabase not configured - auth features will be disabled');
+  if (isProdMode() && !isDemoMode()) {
+    console.error('Missing Supabase environment variables in production');
+    // Don't throw in production - just disable auth features
   }
+  console.warn('⚠️ Supabase not configured - auth features will be disabled');
 }
 
 export const supabase = (supabaseUrl && supabaseAnonKey) 
